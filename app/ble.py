@@ -8,7 +8,8 @@ TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 
 
 def notification_handler(sender, data):
-    print(f"\nESP32: {data.decode(errors='replace')}", end="\n> ", flush=True)
+    #print(f"\nESP32: {data.decode(errors='replace')}", end="\n> ", flush=True)
+    print(f"{data.decode(errors='replace')}", end="", flush=True)
 
 
 async def main():

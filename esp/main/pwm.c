@@ -18,8 +18,8 @@ static const gpio_num_t pwm_pins[PWM_CHANNELS] = {
     GPIO_NUM_1,
     GPIO_NUM_2,
     GPIO_NUM_3,
-    GPIO_NUM_16,
-    GPIO_NUM_17
+    GPIO_NUM_18,
+    GPIO_NUM_19
 };
 
 // MCPWM handles

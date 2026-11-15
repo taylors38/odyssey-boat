@@ -9,6 +9,9 @@
 #include "ble_uart.h"
 #include "nvs_flash.h"
 #include "pwm.h"
+#include "encoder.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 int green = 0;
 int red = 0;
@@ -19,6 +22,17 @@ bool new_data = false;
 int n_user_args;
 char* user_args[4];
 
+float left_off  = 0.0;
+float right_off = 0.0;
+
+float kP = 1;
+float sp = 0;
+
+float P(float pv)
+{
+	return kP * (sp - pv);
+}
+
 static void ble_rx_callback(const uint8_t *data, size_t len)
 {
 	new_data = true;
@@ -26,6 +40,7 @@ static void ble_rx_callback(const uint8_t *data, size_t len)
     printf("Received %u bytes\n", (unsigned)len);
 
 	memcpy(user_input, data, len);
+	user_args[n_user_args++] = user_input;
 
 	for(int i = 0; i < len; i++)
 	{
@@ -46,7 +61,7 @@ static void ble_rx_callback(const uint8_t *data, size_t len)
 	}
 
     // Echo received data back to the laptop
-    ble_uart_tx(data, len);
+    //ble_uart_tx(data, len);
 }
 
 int app_main()
@@ -117,6 +132,7 @@ int app_main()
 	gpio_set_direction(GPIO_NUM_15, GPIO_MODE_OUTPUT);
 
 	pwm_init();
+	encoder_init();
 
 	char* hello = "\nHello there!\n";
 	uart_write_bytes(UART_NUM_0, hello, strlen(hello));
@@ -161,32 +177,58 @@ int app_main()
 				gpio_set_level(GPIO_NUM_15, 0);
 			}
 
-			if(!strcmp(user_input, "left"))
+			if(!strcmp(user_input, "le"))
 			{
-				
 				if(n_user_args > 1)
 				{
 					float f = strtof(user_args[1], NULL);
-					pwm_set_duty(0, f);
-					pwm_set_duty(1, f);
-					pwm_set_duty(2, f);
+					printf("left %.2f\n", f);
+					pwm_set_duty(0, f + left_off);
+					pwm_set_duty(1, f + left_off);
+					pwm_set_duty(2, f + left_off);
 				}
 			}
 
-			if(!strcmp(user_input, "right"))
+			if(!strcmp(user_input, "ri"))
 			{
-				
 				if(n_user_args > 1)
 				{
 					float f = strtof(user_args[1], NULL);
-					pwm_set_duty(3, f);
-					pwm_set_duty(4, f);
-					pwm_set_duty(5, f);
+					printf("right %.2f\n", f);
+					pwm_set_duty(3, f + right_off);
+					pwm_set_duty(4, f + right_off);
+					pwm_set_duty(5, f + right_off);
+				}
+			}
+
+			if(!strcmp(user_input, "kp"))
+			{
+				if(n_user_args > 1)
+				{
+					float f = strtof(user_args[1], NULL);
+					kP = f;
+				}
+			}
+
+			if(!strcmp(user_input, "sp"))
+			{
+				if(n_user_args > 1)
+				{
+					float f = strtof(user_args[1], NULL);
+					sp = f;
 				}
 			}
 		}
 
 		led_strip_set_pixel(led, 0, red, green, 0);
 		led_strip_refresh(led);
+
+		int count = encoder_get_count();
+		char abuf[48];
+		snprintf(abuf, sizeof(abuf), "Encoder Pos: %d\r", count);
+		//printf("Ecoder count: %d\n", count);
+    	ble_uart_tx((uint8_t*)abuf, strlen(abuf));
+
+		vTaskDelay(pdMS_TO_TICKS(200));
 	}
 }
